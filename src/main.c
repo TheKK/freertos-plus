@@ -105,7 +105,6 @@ void command_prompt(void *pvParameters)
 		else
 			fio_printf(2, "\r\n\"%s\" command not found.\r\n", argv[0]);
 	}
-
 }
 
 void system_logger(void *pvParameters)
@@ -153,10 +152,10 @@ int main()
 	enable_rs232_interrupts();
 	enable_rs232();
 	
-	fs_init();
-	fio_init();
+	fs_init();	/* filesystem stuff */
+	fio_init();	/* stdio stuff */
 	
-	register_romfs("romfs", &_sromfs);
+	register_romfs("romfs", &_sromfs);	/* kind like mount and setup deiver*/
 	
 	/* Create the queue used by the serial task.  Messages for write to
 	 * the RS232. */

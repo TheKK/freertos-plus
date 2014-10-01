@@ -23,7 +23,7 @@ __attribute__((constructor)) void fs_init() {
 int register_fs(const char * mountpoint, fs_open_t callback, void * opaque) {
     int i;
     DBGOUT("register_fs(\"%s\", %p, %p)\r\n", mountpoint, callback, opaque);
-    
+
     for (i = 0; i < MAX_FS; i++) {
         if (!fss[i].cb) {
             fss[i].hash = hash_djb2((const uint8_t *) mountpoint, -1);
@@ -32,7 +32,7 @@ int register_fs(const char * mountpoint, fs_open_t callback, void * opaque) {
             return 0;
         }
     }
-    
+
     return -1;
 }
 
@@ -41,15 +41,16 @@ int fs_open(const char * path, int flags, int mode) {
     uint32_t hash;
     int i;
 //    DBGOUT("fs_open(\"%s\", %i, %i)\r\n", path, flags, mode);
-    
+//
     while (path[0] == '/')
         path++;
-    
+
     slash = strchr(path, '/');
-    
+
     if (!slash)
         return -2;
 
+    /* hash for filesystem mount point */
     hash = hash_djb2((const uint8_t *) path, slash - path);
     path = slash + 1;
 
@@ -57,6 +58,6 @@ int fs_open(const char * path, int flags, int mode) {
         if (fss[i].hash == hash)
             return fss[i].cb(fss[i].opaque, path, flags, mode);
     }
-    
+
     return -2;
 }

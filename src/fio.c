@@ -61,10 +61,10 @@ static ssize_t stdin_read(void * opaque, void * buf, size_t count) {
 static ssize_t stdout_write(void * opaque, const void * buf, size_t count) {
     int i;
     const char * data = (const char *) buf;
-    
+
     for (i = 0; i < count; i++)
         send_byte(data[i]);
-    
+
     return count;
 }
 

@@ -59,27 +59,29 @@ int parse_command(char *str, char *argv[]){
 	return count;
 }
 
-void ls_command(int n, char *argv[]){
-
-}
-
 int filedump(const char *filename){
 	char buf[128];
 
 	int fd=fs_open(filename, 0, O_RDONLY);
 
-	if(fd==OPENFAIL)
+	if (fd == -2)
+		return 0;
+	if (fd == -1)
 		return 0;
 
 	fio_printf(1, "\r\n");
 
 	int count;
 	while((count=fio_read(fd, buf, sizeof(buf)))>0){
-		fio_write(1, buf, count);
+		/*fio_write(1, buf, count);*/
+		fio_printf(1, "\r\n%s\r\n", buf);
 	}
 
 	fio_close(fd);
 	return 1;
+}
+
+void ls_command(int n, char *argv[]){
 }
 
 void ps_command(int n, char *argv[]){
@@ -110,7 +112,7 @@ void man_command(int n, char *argv[]){
 	strcat(buf, argv[1]);
 
 	if(!filedump(buf))
-		fio_printf(2, "\r\nManual not available.\r\n");
+		fio_printf(2, "\r\nManual %s not available.\r\n", argv[1]);
 }
 
 void host_command(int n, char *argv[]){
