@@ -4,6 +4,7 @@
 #include <string.h>
 #include "fio.h"
 #include "filesystem.h"
+#include "romfs.h"
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -64,9 +65,7 @@ int filedump(const char *filename){
 
 	int fd=fs_open(filename, 0, O_RDONLY);
 
-	if (fd == -2)
-		return 0;
-	if (fd == -1)
+	if (fd == FS_OPENFAIL || fd == ROMFS_OPENFAIL)
 		return 0;
 
 	fio_printf(1, "\r\n");
@@ -89,7 +88,7 @@ void ps_command(int n, char *argv[]){
 	vTaskList(buf);
         fio_printf(1, "\n\rName          State   Priority  Stack  Num\n\r");
         fio_printf(1, "*******************************************\n\r");
-	fio_printf(1, "%s\r\n", buf + 2);	
+	fio_printf(1, "%s\r\n", buf + 2);
 }
 
 void cat_command(int n, char *argv[]){
@@ -115,26 +114,25 @@ void man_command(int n, char *argv[]){
 		fio_printf(2, "\r\nManual %s not available.\r\n", argv[1]);
 }
 
-void host_command(int n, char *argv[]){
+void host_command(int n, char *argv[]) {
     int i, len = 0, rnt;
     char command[128] = {0};
 
-    if(n>1){
+    if (n > 1) {
         for(i = 1; i < n; i++) {
             memcpy(&command[len], argv[i], strlen(argv[i]));
             len += (strlen(argv[i]) + 1);
             command[len - 1] = ' ';
         }
         command[len - 1] = '\0';
-        rnt=host_action(SYS_SYSTEM, command);
+        rnt = host_action(SYS_SYSTEM, command);
         fio_printf(1, "\r\nfinish with exit code %d.\r\n", rnt);
-    } 
-    else {
+    } else {
         fio_printf(2, "\r\nUsage: host 'command'\r\n");
     }
 }
 
-void help_command(int n,char *argv[]){
+void help_command(int n,char *argv[]) {
 	int i;
 	fio_printf(1, "\r\n");
 	for(i=0;i<sizeof(cl)/sizeof(cl[0]); ++i){

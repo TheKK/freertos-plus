@@ -97,12 +97,12 @@ static int fio_is_open_int(int fd) {
 
 static int fio_findfd() {
     int i;
-    
+
     for (i = 0; i < MAX_FDS; i++) {
         if (!fio_is_open_int(i))
             return i;
     }
-    
+
     return -1;
 }
 
@@ -119,7 +119,7 @@ int fio_open(fdread_t fdread, fdwrite_t fdwrite, fdseek_t fdseek, fdclose_t fdcl
 //    DBGOUT("fio_open(%p, %p, %p, %p, %p)\r\n", fdread, fdwrite, fdseek, fdclose, opaque);
     xSemaphoreTake(fio_sem, portMAX_DELAY);
     fd = fio_findfd();
-    
+
     if (fd >= 0) {
         fio_fds[fd].fdread = fdread;
         fio_fds[fd].fdwrite = fdwrite;
@@ -128,7 +128,7 @@ int fio_open(fdread_t fdread, fdwrite_t fdwrite, fdseek_t fdseek, fdclose_t fdcl
         fio_fds[fd].opaque = opaque;
     }
     xSemaphoreGive(fio_sem);
-    
+
     return fd;
 }
 

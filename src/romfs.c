@@ -23,7 +23,7 @@ static ssize_t romfs_read(void * opaque, void * buf, size_t count) {
     struct romfs_fds_t * f = (struct romfs_fds_t *) opaque;
     const uint8_t * size_p = f->file - 4;
     uint32_t size = get_unaligned(size_p);
-    
+
     if ((f->cursor + count) > size)
         count = size - f->cursor;
 
@@ -38,7 +38,7 @@ static off_t romfs_seek(void * opaque, off_t offset, int whence) {
     const uint8_t * size_p = f->file - 4;
     uint32_t size = get_unaligned(size_p);
     uint32_t origin;
-    
+
     switch (whence) {
     case SEEK_SET:
         origin = 0;

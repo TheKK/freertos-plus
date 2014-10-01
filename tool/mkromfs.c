@@ -129,6 +129,6 @@ int main(int argc, char ** argv) {
     if (outname)
         fclose(outfile);
     closedir(dirp);
-    
+
     return 0;
 }
