@@ -39,23 +39,24 @@ void USART2_IRQHandler()
 		/* "give" the serial_tx_wait_sem semaphore to notfiy processes
 		 * that the buffer has a spot free for the next byte.
 		 */
-		xSemaphoreGiveFromISR(serial_tx_wait_sem, &xHigherPriorityTaskWoken);
+		xSemaphoreGiveFromISR(serial_tx_wait_sem,
+				      &xHigherPriorityTaskWoken);
 
 		/* Diables the transmit interrupt. */
 		USART_ITConfig(USART2, USART_IT_TXE, DISABLE);
 		/* If this interrupt is for a receive... */
-	}else if(USART_GetITStatus(USART2, USART_IT_RXNE) != RESET){
+	} else if (USART_GetITStatus(USART2, USART_IT_RXNE) != RESET) {
 		char msg = USART_ReceiveData(USART2);
 
 		/* If there is an error when queueing the received byte, freeze! */
-		if(!xQueueSendToBackFromISR(serial_rx_queue, &msg, &xHigherPriorityTaskWoken))
-			while(1);
-	}
-	else {
+		if (!xQueueSendToBackFromISR
+		    (serial_rx_queue, &msg, &xHigherPriorityTaskWoken))
+			while (1) ;
+	} else {
 		/* Only transmit and receive interrupts should be enabled.
 		 * If this is another type of interrupt, freeze.
 		 */
-		while(1);
+		while (1) ;
 	}
 
 	if (xHigherPriorityTaskWoken) {
@@ -69,7 +70,7 @@ void send_byte(char ch)
 	 * is "given" by the RS232 port interrupt when the buffer has room for
 	 * another byte.
 	 */
-	while (!xSemaphoreTake(serial_tx_wait_sem, portMAX_DELAY));
+	while (!xSemaphoreTake(serial_tx_wait_sem, portMAX_DELAY)) ;
 
 	/* Send the byte and enable the transmit interrupt (it is disabled by
 	 * the interrupt).
@@ -82,9 +83,10 @@ char recv_byte()
 {
 	USART_ITConfig(USART2, USART_IT_RXNE, ENABLE);
 	char msg;
-	while(!xQueueReceive(serial_rx_queue, &msg, portMAX_DELAY));
+	while (!xQueueReceive(serial_rx_queue, &msg, portMAX_DELAY)) ;
 	return msg;
 }
+
 void command_prompt(void *pvParameters)
 {
 	char buf[128];
@@ -92,40 +94,46 @@ void command_prompt(void *pvParameters)
 	char hint[] = USER_NAME "@" USER_NAME "-STM32:~$ ";
 
 	fio_printf(1, "\rWelcome to FreeRTOS Shell\r\n");
-	while(1){
+	while (1) {
 		fio_printf(1, "%s", hint);
 		fio_read(0, buf, 127);
 
-		int n=parse_command(buf, argv);
+		int n = parse_command(buf, argv);
 
 		/* will return pointer to the command function */
-		cmdfunc *fptr=do_command(argv[0]);
-		if(fptr!=NULL)
+		cmdfunc *fptr = do_command(argv[0]);
+		if (fptr != NULL)
 			fptr(n, argv);
 		else
-			fio_printf(2, "\r\n\"%s\" command not found.\r\n", argv[0]);
+			fio_printf(2, "\r\n\"%s\" command not found.\r\n",
+				   argv[0]);
 	}
 }
 
 void system_logger(void *pvParameters)
 {
 	signed char buf[128];
-	char output[512] = {0};
-	char *tag = "\nName          State   Priority  Stack  Num\n*******************************************\n";
+	char output[512] = { 0 };
+	char *tag =
+	    "\nName          State   Priority  Stack  Num\n*******************************************\n";
 	int handle, error;
 	const portTickType xDelay = 100000 / 100;
 
 	handle = host_action(SYS_OPEN, "output/syslog", 4);
-	if(handle == -1) {
+	if (handle == -1) {
 		fio_printf(1, "Open file error!\n");
 		return;
 	}
 
-	while(1) {
+	while (1) {
 		memcpy(output, tag, strlen(tag));
-		error = host_action(SYS_WRITE, handle, (void *)output, strlen(output));
-		if(error != 0) {
-			fio_printf(1, "Write file error! Remain %d bytes didn't write in the file.\n\r", error);
+		error =
+		    host_action(SYS_WRITE, handle, (void *)output,
+				strlen(output));
+		if (error != 0) {
+			fio_printf(1,
+				   "Write file error! Remain %d bytes didn't write in the file.\n\r",
+				   error);
 			host_action(SYS_CLOSE, handle);
 			return;
 		}
@@ -133,9 +141,13 @@ void system_logger(void *pvParameters)
 
 		memcpy(output, (char *)(buf + 2), strlen((char *)buf) - 2);
 
-		error = host_action(SYS_WRITE, handle, (void *)buf, strlen((char *)buf));
-		if(error != 0) {
-			fio_printf(1, "Write file error! Remain %d bytes didn't write in the file.\n\r", error);
+		error =
+		    host_action(SYS_WRITE, handle, (void *)buf,
+				strlen((char *)buf));
+		if (error != 0) {
+			fio_printf(1,
+				   "Write file error! Remain %d bytes didn't write in the file.\n\r",
+				   error);
 			host_action(SYS_CLOSE, handle);
 			return;
 		}
@@ -152,10 +164,10 @@ int main()
 	enable_rs232_interrupts();
 	enable_rs232();
 
-	fs_init();	/* filesystem stuff */
-	fio_init();	/* stdio stuff */
+	fs_init();		/* filesystem stuff */
+	fio_init();		/* stdio stuff */
 
-	register_romfs("romfs", &_sromfs);	/* kind like mount and setup deiver*/
+	register_romfs("romfs", &_sromfs);	/* kind like mount and setup deiver */
 
 	/* Create the queue used by the serial task.  Messages for write to
 	 * the RS232. */
@@ -166,14 +178,14 @@ int main()
 
 	/* Create a task to output text read from romfs. */
 	xTaskCreate(command_prompt,
-		    (signed portCHAR *) "CLI",
-		    512 /* stack size */, NULL, tskIDLE_PRIORITY + 2, NULL);
+		    (signed portCHAR *)"CLI",
+		    512 /* stack size */ , NULL, tskIDLE_PRIORITY + 2, NULL);
 
 #if 0
 	/* Create a task to record system log. */
 	xTaskCreate(system_logger,
-		    (signed portCHAR *) "Logger",
-		    1024 /* stack size */, NULL, tskIDLE_PRIORITY + 1, NULL);
+		    (signed portCHAR *)"Logger",
+		    1024 /* stack size */ , NULL, tskIDLE_PRIORITY + 1, NULL);
 #endif
 
 	/* Start running the tasks. */

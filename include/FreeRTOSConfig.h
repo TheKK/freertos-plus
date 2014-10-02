@@ -58,8 +58,6 @@
 #define xPortSysTickHandler SysTick_Handler
 #define vPortSVCHandler SVC_Handler
 
-
-
 /*-----------------------------------------------------------
  * Application specific definitions.
  *
@@ -75,7 +73,7 @@
 #define configUSE_PREEMPTION		1
 #define configUSE_IDLE_HOOK			0
 #define configUSE_TICK_HOOK			1
-#define configCPU_CLOCK_HZ			( ( unsigned long ) 72000000 )	
+#define configCPU_CLOCK_HZ			( ( unsigned long ) 72000000 )
 #define configTICK_RATE_HZ			( ( portTickType ) 100 )
 #define configMAX_PRIORITIES		( ( unsigned portBASE_TYPE ) 5 )
 #define configMINIMAL_STACK_SIZE	( ( unsigned short ) 128 )
@@ -103,9 +101,8 @@ to exclude the API function. */
 
 /* This is the raw value as per the Cortex-M3 NVIC.  Values can be 255
 (lowest) to 0 (1?) (highest). */
-#define configKERNEL_INTERRUPT_PRIORITY 		127 //Needs to be below 240 (0xf0) to work with QEMU, since this is the priority mask used
-#define configMAX_SYSCALL_INTERRUPT_PRIORITY 	191 /* equivalent to 0xb0, or priority 11. */
-
+#define configKERNEL_INTERRUPT_PRIORITY 		127	//Needs to be below 240 (0xf0) to work with QEMU, since this is the priority mask used
+#define configMAX_SYSCALL_INTERRUPT_PRIORITY 	191	/* equivalent to 0xb0, or priority 11. */
 
 /* This is the value being used as per the ST library which permits 16
 priority values, 0 to 15.  This must correspond to the
@@ -113,5 +110,4 @@ configKERNEL_INTERRUPT_PRIORITY setting.  Here 15 corresponds to the lowest
 NVIC value of 255. */
 #define configLIBRARY_KERNEL_INTERRUPT_PRIORITY	15
 
-#endif /* FREERTOS_CONFIG_H */
-
+#endif				/* FREERTOS_CONFIG_H */

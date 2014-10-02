@@ -1,1 +1,3 @@
-void osDbgPrintf(const char * fmt, ...) { }
+void osDbgPrintf(const char *fmt, ...)
+{
+}

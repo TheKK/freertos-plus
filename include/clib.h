@@ -17,8 +17,7 @@ int sprnitf(char *, const char *, ...);
 char *itoa(const char *numbox, int i, unsigned int base);
 char *utoa(const char *numbox, unsigned int i, unsigned int base);
 
-char *strcat(char * restrict dest, const char * restrict source);
+char *strcat(char *restrict dest, const char *restrict source);
 size_t strlen(const char *str);
-
 
 #endif

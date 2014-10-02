@@ -23,4 +23,4 @@ void enable_rs232_interrupts(void);
 
 void enable_rs232(void);
 
-#endif /* __STM32_P103_H */
+#endif				/* __STM32_P103_H */
