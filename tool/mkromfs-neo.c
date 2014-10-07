@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <dirent.h>
 #include <string.h>
+#include <getopt.h>
 
 #define hash_init 5381
 
@@ -23,7 +24,6 @@ uint32_t hash_djb2(const uint8_t * str, uint32_t hash)
 void usage(const char *binname)
 {
 	printf("Usage: %s [-d <dir>] [outfile]\n", binname);
-	exit(-1);
 }
 
 void processdir(DIR * dirp, const char *curpath, FILE * outfile,
@@ -63,7 +63,7 @@ void processdir(DIR * dirp, const char *curpath, FILE * outfile,
 			infile = fopen(fullpath, "rb");
 			if (!infile) {
 				perror("opening input file");
-				exit(-1);
+				exit(EXIT_FAILURE);
 			}
 			b = (hash >> 0) & 0xff;
 			fwrite(&b, 1, 1, outfile);
@@ -97,32 +97,35 @@ void processdir(DIR * dirp, const char *curpath, FILE * outfile,
 
 int main(int argc, char **argv)
 {
-	char *binname = *argv++;
-	char *o;
+	char *binname = argv[0];
 	char *outname = NULL;
 	char *dirname = ".";
 	uint64_t z = 0;
 	FILE *outfile;
 	DIR *dirp;
+	int opt;
 
-	while ((o = *argv++)) {
-		if (*o == '-') {
-			o++;
-			switch (*o) {
-			case 'd':
-				dirname = *argv++;
-				break;
-			default:
-				usage(binname);
-				break;
-			}
-		} else {
-			if (outname)
-				usage(binname);
-			outname = o;
+	/* Get input options */
+	while ((opt = getopt(argc, argv, "d:o:h")) != -1) {
+		switch (opt) {
+		case 'd':
+			dirname = optarg;
+			break;
+		case 'o':
+			outname = optarg;
+			break;
+		case 'h':
+			usage(binname);
+			exit(EXIT_SUCCESS);
+			break;
+		default:
+			usage(binname);
+			exit(EXIT_FAILURE);
+			break;
 		}
 	}
 
+	/* Start working! */
 	if (!outname)
 		outfile = stdout;
 	else
@@ -130,13 +133,13 @@ int main(int argc, char **argv)
 
 	if (!outfile) {
 		perror("opening output file");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	dirp = opendir(dirname);
 	if (!dirp) {
 		perror("opening directory");
-		exit(-1);
+		exit(EXIT_FAILURE);
 	}
 
 	processdir(dirp, "", outfile, dirname);

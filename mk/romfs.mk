@@ -10,7 +10,7 @@ $(OUTDIR)/$(ROMDIR).o: $(OUTDIR)/$(ROMDIR).bin
 $(OUTDIR)/$(ROMDIR).bin: $(ROMDIR) $(OUTDIR)/$(TOOLDIR)/mkromfs
 	@mkdir -p $(dir $@)
 	@echo "    MKROMFS "$@
-	@$(OUTDIR)/$(TOOLDIR)/mkromfs -d $< $@
+	@$(OUTDIR)/$(TOOLDIR)/mkromfs -d $< -o $@
 
 $(ROMDIR):
 	@mkdir -p $@

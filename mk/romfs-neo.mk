@@ -10,7 +10,7 @@ $(OUTDIR)/$(ROMDIR).o: $(OUTDIR)/$(ROMDIR).bin
 $(OUTDIR)/$(ROMDIR).bin: $(ROMDIR) $(OUTDIR)/$(TOOLDIR)/mkromfs-neo
 	@mkdir -p $(dir $@)
 	@echo "    MKROMFS_NEO "$@
-	@$(OUTDIR)/$(TOOLDIR)/mkromfs-neo -d $< $@
+	@$(OUTDIR)/$(TOOLDIR)/mkromfs-neo -d $< -o $@
 
 $(ROMDIR):
 	@mkdir -p $@
