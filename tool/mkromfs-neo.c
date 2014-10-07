@@ -9,9 +9,12 @@
 #include <string.h>
 #include <getopt.h>
 
-#define hash_init 5381
+#define HASH_INIT	5381
+#define MAX_FULL_PATH	1024
+#define MAX_BUFFER_SIZE	16 * 1024
 
-uint32_t hash_djb2(const uint8_t * str, uint32_t hash)
+uint32_t
+hash_djb2(const uint8_t * str, uint32_t hash)
 {
 	int c;
 
@@ -21,21 +24,24 @@ uint32_t hash_djb2(const uint8_t * str, uint32_t hash)
 	return hash;
 }
 
-void usage(const char *binname)
+void
+usage(const char *binname)
 {
 	printf("Usage: %s [-d <dir>] [outfile]\n", binname);
 }
 
-void processdir(DIR * dirp, const char *curpath, FILE * outfile,
+void
+processdir(DIR * dirp, const char *curpath, FILE * outfile,
 		const char *prefix)
 {
-	char fullpath[1024];
-	char buf[16 * 1024];
-	struct dirent *ent;
-	DIR *rec_dirp;
-	uint32_t cur_hash = hash_djb2((const uint8_t *)curpath, hash_init);
+	char fullpath[MAX_FULL_PATH];
+	char tmpPath[MAX_FULL_PATH];
+	char buf[MAX_BUFFER_SIZE];
+	struct dirent *ent, *subdir_ent;
+	DIR *rec_dirp, *sub_dirp;
+	uint32_t cur_hash = hash_djb2((const uint8_t *)curpath, HASH_INIT);
 	uint32_t size, w, hash;
-	uint8_t b;
+	uint8_t b, i;
 	FILE *infile;
 
 	while ((ent = readdir(dirp))) {
@@ -48,54 +54,93 @@ void processdir(DIR * dirp, const char *curpath, FILE * outfile,
 #else
 		if (ent->d_type == DT_DIR) {
 #endif
+			/* Ignore . and .. */
 			if (strcmp(ent->d_name, ".") == 0)
 				continue;
 			if (strcmp(ent->d_name, "..") == 0)
 				continue;
+
+			/*
+			 * My work here
+			 */
 			strcat(fullpath, "/");
+			sub_dirp = opendir(fullpath);
+
+			/* Write folder name(with path) */
+			fwrite(fullpath + strlen(prefix) + 1, 1,
+			       strlen(fullpath) - strlen(prefix) - 1, outfile);
+			fwrite(": ", 1, 2, outfile);
+
+			/* Write all file name in the folder */
+			while ((subdir_ent = readdir(sub_dirp))) {
+				if (strcmp(subdir_ent->d_name, ".") == 0)
+					continue;
+				if (strcmp(subdir_ent->d_name, "..") == 0)
+					continue;
+
+				if (subdir_ent->d_type == DT_DIR)
+					fwrite("D", 1, 1, outfile);
+				else
+					fwrite("F", 1, 1, outfile);
+
+				strcpy(tmpPath, fullpath);
+				strcat(tmpPath, subdir_ent->d_name);
+				fwrite(tmpPath + strlen(prefix) + 1, 1,
+				       strlen(tmpPath) - strlen(prefix) - 1,
+				       outfile);
+				printf("j");
+			}
+			closedir(sub_dirp);
+
 			rec_dirp = opendir(fullpath);
 			processdir(rec_dirp, fullpath + strlen(prefix) + 1,
 				   outfile, prefix);
 			closedir(rec_dirp);
-		} else {
+		} else { /* ent->d_type != DT_DIR */
 			hash =
 			    hash_djb2((const uint8_t *)ent->d_name, cur_hash);
+
 			infile = fopen(fullpath, "rb");
 			if (!infile) {
 				perror("opening input file");
 				exit(EXIT_FAILURE);
 			}
-			b = (hash >> 0) & 0xff;
-			fwrite(&b, 1, 1, outfile);
-			b = (hash >> 8) & 0xff;
-			fwrite(&b, 1, 1, outfile);
-			b = (hash >> 16) & 0xff;
-			fwrite(&b, 1, 1, outfile);
-			b = (hash >> 24) & 0xff;
-			fwrite(&b, 1, 1, outfile);
+
+			/* Write hash */
+			for (i = 0; i < sizeof(hash) / sizeof(b); i++) {
+				b = (hash >> (i * 8)) & 0xff;	// little-endian
+				fwrite(&b, 1, 1, outfile);
+			}
+
+			/* Get file size */
 			fseek(infile, 0, SEEK_END);
 			size = ftell(infile);
 			fseek(infile, 0, SEEK_SET);
-			b = (size >> 0) & 0xff;
-			fwrite(&b, 1, 1, outfile);
-			b = (size >> 8) & 0xff;
-			fwrite(&b, 1, 1, outfile);
-			b = (size >> 16) & 0xff;
-			fwrite(&b, 1, 1, outfile);
-			b = (size >> 24) & 0xff;
-			fwrite(&b, 1, 1, outfile);
+
+			/* Write file size */
+			for (i = 0; i < sizeof(size) / sizeof(b); i++) {
+				b = (size >> (i * 8)) & 0xff;
+				fwrite(&b, 1, 1, outfile);
+			}
+
+			/* Write file content */
 			while (size) {
-				w = size > 16 * 1024 ? 16 * 1024 : size;
+				w = size > MAX_BUFFER_SIZE ?
+					MAX_BUFFER_SIZE : size;
+
 				fread(buf, 1, w, infile);
 				fwrite(buf, 1, w, outfile);
+
 				size -= w;
 			}
+
 			fclose(infile);
 		}
 	}
 }
 
-int main(int argc, char **argv)
+int
+main(int argc, char **argv)
 {
 	char *binname = argv[0];
 	char *outname = NULL;
@@ -128,12 +173,12 @@ int main(int argc, char **argv)
 	/* Start working! */
 	if (!outname)
 		outfile = stdout;
-	else
+	else {
 		outfile = fopen(outname, "wb");
-
-	if (!outfile) {
-		perror("opening output file");
-		exit(EXIT_FAILURE);
+		if (!outfile) {
+			perror("opening output file");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	dirp = opendir(dirname);

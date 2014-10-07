@@ -128,12 +128,12 @@ int main(int argc, char **argv)
 	/* Start working! */
 	if (!outname)
 		outfile = stdout;
-	else
+	else {
 		outfile = fopen(outname, "wb");
-
-	if (!outfile) {
-		perror("opening output file");
-		exit(EXIT_FAILURE);
+		if (!outfile) {
+			perror("opening output file");
+			exit(EXIT_FAILURE);
+		}
 	}
 
 	dirp = opendir(dirname);
