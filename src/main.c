@@ -12,6 +12,7 @@
 #include "filesystem.h"
 #include "fio.h"
 #include "romfs.h"
+#include "romfs-neo.h"
 
 #include "clib.h"
 #include "shell.h"

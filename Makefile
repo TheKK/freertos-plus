@@ -23,7 +23,7 @@ STM32_LIB = $(CODEBASE)/libraries/STM32F10x_StdPeriph_Driver
 CMSIS_PLAT_SRC = $(CMSIS_LIB)/DeviceSupport/$(VENDOR)/$(PLAT)
 
 FREERTOS_SRC = $(CODEBASE)/libraries/FreeRTOS
-FREERTOS_INC = $(FREERTOS_SRC)/include/                                       
+FREERTOS_INC = $(FREERTOS_SRC)/include/
 FREERTOS_PORT_INC = $(FREERTOS_SRC)/portable/GCC/ARM_$(ARCH)/
 
 OUTDIR = build
@@ -41,7 +41,7 @@ INCDIR = include \
 INCLUDES = $(addprefix -I,$(INCDIR))
 DATDIR = data
 TOOLDIR = tool
-TMPDiR = output
+TMPDIR = output
 
 HEAP_IMPL = heap_ww
 SRC = $(wildcard $(addsuffix /*.c,$(SRCDIR))) \
@@ -52,7 +52,7 @@ SRC = $(wildcard $(addsuffix /*.c,$(SRCDIR))) \
 OBJ := $(addprefix $(OUTDIR)/,$(patsubst %.s,%.o,$(SRC:.c=.o)))
 DEP = $(OBJ:.o=.o.d)
 DAT =
- 
+
 MAKDIR = mk
 MAK = $(wildcard $(MAKDIR)/*.mk)
 
