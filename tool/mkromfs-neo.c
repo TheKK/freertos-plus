@@ -40,7 +40,7 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 	struct dirent *ent, *subdir_ent;
 	DIR *rec_dirp, *sub_dirp;
 	uint32_t cur_hash = hash_djb2((const uint8_t *)curpath, HASH_INIT);
-	uint32_t size, w, hash;
+	uint32_t size, w, hash, file_num;
 	uint8_t b, i;
 	FILE *infile;
 
@@ -66,10 +66,27 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 			strcat(fullpath, "/");
 			sub_dirp = opendir(fullpath);
 
-			/* Write folder name(with path) */
-			fwrite(fullpath + strlen(prefix) + 1, 1,
-			       strlen(fullpath) - strlen(prefix) - 1, outfile);
-			fwrite(": ", 1, 2, outfile);
+			/* Write hash of folder name(with path) */
+			hash = hash_djb2((const uint8_t *)fullpath +
+					 strlen(prefix) + 1, cur_hash);
+			for (i = 0; i < sizeof(hash) / sizeof(b); i++) {
+				b = (hash >> (i * 8)) & 0xff;
+				fwrite(&b, 1, 1, outfile);
+			}
+
+			/* Write type(D or F) */
+			fwrite("D", 1, 1, outfile);
+			
+			/* Write number of files */
+			file_num = 0;
+			while(readdir(sub_dirp))
+				file_num++;
+			rewinddir(sub_dirp);
+
+			for (i = 0; i < sizeof(file_num) / sizeof(b); i++) {
+				b = (size >> (i * 8)) & 0xff;
+				fwrite(&b, 1, 1, outfile);
+			}
 
 			/* Write all file name in the folder */
 			while ((subdir_ent = readdir(sub_dirp))) {
@@ -78,17 +95,15 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 				if (strcmp(subdir_ent->d_name, "..") == 0)
 					continue;
 
-				if (subdir_ent->d_type == DT_DIR)
-					fwrite("D", 1, 1, outfile);
-				else
-					fwrite("F", 1, 1, outfile);
-
+				/* write hash of file path under this dir */
 				strcpy(tmpPath, fullpath);
 				strcat(tmpPath, subdir_ent->d_name);
-				fwrite(tmpPath + strlen(prefix) + 1, 1,
-				       strlen(tmpPath) - strlen(prefix) - 1,
-				       outfile);
-				printf("j");
+				hash = hash_djb2((const uint8_t *)tmpPath +
+						 strlen(prefix) + 1, cur_hash);
+				for (i = 0; i < sizeof(hash) / sizeof(b); i++) {
+					b = (hash >> (i * 8)) & 0xff;
+					fwrite(&b, 1, 1, outfile);
+			}
 			}
 			closedir(sub_dirp);
 
@@ -111,6 +126,9 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 				b = (hash >> (i * 8)) & 0xff;	// little-endian
 				fwrite(&b, 1, 1, outfile);
 			}
+
+			/* Write type(D or F) */
+			fwrite("F", 1, 1, outfile);
 
 			/* Get file size */
 			fseek(infile, 0, SEEK_END);
@@ -144,7 +162,7 @@ main(int argc, char **argv)
 {
 	char *binname = argv[0];
 	char *outname = NULL;
-	char *dirname = ".";
+	char *dirname = (char*)".";
 	uint64_t z = 0;
 	FILE *outfile;
 	DIR *dirp;
