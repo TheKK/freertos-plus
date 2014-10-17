@@ -8,7 +8,7 @@
 #include "osdebug.h"
 #include "hash-djb2.h"
 
-struct romfs_read_t
+struct romfs_file_t
 {
 	uint32_t hash;
 	uint32_t length;
@@ -31,8 +31,10 @@ static uint32_t get_unaligned(const uint8_t * d)
 static ssize_t romfs_read(void *opaque, void *buf, size_t count)
 {
 	struct romfs_fds_t *f = (struct romfs_fds_t *)opaque;
-	const uint8_t *size_p = f->file - 4;
-	uint32_t size = get_unaligned(size_p);
+	const struct romfs_file_t *file_p =
+		(struct romfs_file_t*)(f->file -
+				      (sizeof(struct romfs_file_t) - 1));
+	uint32_t size = file_p->length;
 
 	if ((f->cursor + count) > size)
 		count = size - f->cursor;
@@ -82,16 +84,28 @@ const uint8_t *romfs_get_file_by_hash(const uint8_t * romfs, uint32_t h,
 	const uint8_t* meta;
 
 	for (meta = romfs;
-	     ((struct romfs_read_t*)meta)->hash &&
-	     ((struct romfs_read_t*)meta)->length;
-	     meta += ((struct romfs_read_t*)meta)->length + sizeof(struct romfs_read_t) - 1) {
-		if (((struct romfs_read_t*)meta)->hash == h) {
+	     ((struct romfs_file_t*)meta)->hash &&
+	     ((struct romfs_file_t*)meta)->length;
+	     meta += ((struct romfs_file_t*)meta)->length + sizeof(struct romfs_file_t) - 1) {
+		if (((struct romfs_file_t*)meta)->hash == h) {
 			if (len) {
-				*len = ((struct romfs_read_t*)meta)->length;
+				*len = ((struct romfs_file_t*)meta)->length;
 			}
-			return &(((struct romfs_read_t*)meta)->data);
+			return &(((struct romfs_file_t*)meta)->data);
 		}
 	}
+	/*struct romfs_file_t *meta;
+
+	for (meta = (void*)romfs;
+	     meta->hash && meta->length;
+	     meta += (meta->length + sizeof(struct romfs_file_t) - 1)) {
+		if (meta->hash == h) {
+			if (len) {
+				*len = meta->length;
+			}
+			return &(meta->data);
+		}
+	}*/
 
 	return NULL;
 }

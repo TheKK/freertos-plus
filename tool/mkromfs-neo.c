@@ -23,7 +23,7 @@
  *
  * +------------------------------------+
  * |  hash  |  type  |  param  |  data  |
- * | 4bytes |  1byte |  1byte  |  1byte |
+ * | 4bytes |  1byte |  4bytes |  1byte |
  * +------------------------------------+
  *
  * [[For directory]]
@@ -43,7 +43,7 @@
  * [[For file]]
  * @hash: store hash of its name(with prefix path).
  * @type: store character 'F'.
- * @para: not used for file type.
+ * @para: The size of file context.
  * @data: indicate the first byte of the entire data chunck, below is
  * 	how data sector looks like when its type is 'F':
  *
@@ -80,8 +80,8 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 	struct dirent *ent, *subdir_ent;
 	DIR *rec_dirp, *sub_dirp;
 	uint32_t cur_hash = hash_djb2((const uint8_t *)curpath, HASH_INIT);
-	uint32_t size, w, hash;
-	uint8_t b, i, s, context_num;
+	uint32_t size, w, hash, context_num;
+	uint8_t b, i, s;
 	FILE *infile;
 
 	while ((ent = readdir(dirp))) {
@@ -119,8 +119,12 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 			while(readdir(sub_dirp))
 				context_num++;
 			rewinddir(sub_dirp);
+			context_num -= 2;	// TODO: use other way
 
-			fwrite(&context_num, 1, 1, outfile);
+			for (i = 0; i < sizeof(context_num) / sizeof(b); i++) {
+				b = (context_num >> (i * 8)) & 0xff;
+				fwrite(&b, 1, 1, outfile);
+			}
 
 			/* Write all file length and its name in the folder */
 			while ((subdir_ent = readdir(sub_dirp))) {
@@ -151,16 +155,13 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 			}
 
 			/* Write hash */
-			for (i = 0; i < sizeof(hash) / sizeof(b); i++) {
+			for (i = 0; i < (int)(sizeof(hash) / sizeof(b)); i++) {
 				b = (hash >> (i * 8)) & 0xff;	// little-endian
 				fwrite(&b, 1, 1, outfile);
 			}
 
 			/* Write type(D or F) */
 			fwrite("F", 1, 1, outfile);
-
-			/* Write null param section */
-			fwrite(" ", 1, 1, outfile);
 
 			/* Get file size */
 			fseek(infile, 0, SEEK_END);

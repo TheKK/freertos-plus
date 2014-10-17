@@ -22,6 +22,7 @@
  * it contains file system structure of test_romfs directory
  */
 extern const unsigned char _sromfs;
+extern const unsigned char _sromfs_neo;
 
 //static void setup_hardware();
 
@@ -169,6 +170,7 @@ int main()
 	fio_init();		/* stdio stuff */
 
 	register_romfs("romfs", &_sromfs);	/* kind like mount and setup deiver */
+	register_romfs_neo("neo", &_sromfs_neo);
 
 	/* Create the queue used by the serial task.  Messages for write to
 	 * the RS232. */

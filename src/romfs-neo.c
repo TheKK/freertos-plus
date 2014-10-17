@@ -8,6 +8,23 @@
 #include "osdebug.h"
 #include "hash-djb2.h"
 
+/********************************************************************
+ * See more about romfs-neo, please checkout ../tool/mkromfs-neo.c
+ ********************************************************************/
+struct romfs_file_t
+{
+	uint32_t hash;
+	uint8_t type;
+	uint32_t param;
+	uint8_t data;
+}__attribute__((packed));
+
+struct romfs_read_dir
+{
+	uint8_t length;
+	uint8_t data;
+}__attribute__((packed));
+
 struct romfs_fds_t {
 	const uint8_t *file;
 	uint32_t cursor;
@@ -24,8 +41,10 @@ static uint32_t get_unaligned(const uint8_t * d)
 static ssize_t romfs_read(void *opaque, void *buf, size_t count)
 {
 	struct romfs_fds_t *f = (struct romfs_fds_t *)opaque;
-	const uint8_t *size_p = f->file - 4;
-	uint32_t size = get_unaligned(size_p);
+	const struct romfs_file_t *file_p =
+		(struct romfs_file_t*)(f->file -
+				      (sizeof(struct romfs_file_t) - 1));
+	uint32_t size = file_p->param;
 
 	if ((f->cursor + count) > size)
 		count = size - f->cursor;
@@ -73,38 +92,71 @@ const uint8_t *romfs_neo_get_file_by_hash(const uint8_t * romfs, uint32_t h,
 				      uint32_t * len)
 {
 	const uint8_t *meta;
+	uint8_t type;
+	uint32_t param, i;
 
-	for (meta = romfs; get_unaligned(meta) && get_unaligned(meta + 4);
-	     meta += get_unaligned(meta + 4) + 8) {
-		if (get_unaligned(meta) == h) {
-			if (len) {
-				*len = get_unaligned(meta + 4);
+	meta = romfs;
+
+	while (((struct romfs_file_t*)meta)->hash &&
+	       ((struct romfs_file_t*)meta)->type &&
+	       ((struct romfs_file_t*)meta)->param) {
+
+		type = ((struct romfs_file_t*)meta)->type;
+		param = ((struct romfs_file_t*)meta)->param;
+
+		/* Check if file(dir) exists */
+		if (((struct romfs_file_t*)meta)->hash == h) {
+			if (len)
+				*len = ((struct romfs_file_t*)meta)->param;
+
+			return &(((struct romfs_file_t*)meta)->data);
+		}
+
+		/* To next hash's address */
+		if ((char)type == 'D') {
+			meta += (sizeof(struct romfs_file_t) - 1);
+			for(i = 0; i < param; i++) {
+				meta += (((struct romfs_read_dir*)meta)->length)
+					+ 1;
 			}
-			return meta + 8;
+		} else if ((char)type == 'F') {
+			meta += ((struct romfs_file_t*)meta)->param +
+				(sizeof(struct romfs_file_t) - 1);
 		}
 	}
 
 	return NULL;
 }
 
+/**
+ *  \brief
+ *
+ *  \param opaque
+ *  \param path   The file path you wnat to find out
+ *  \param flags  Currently no use
+ *  \param mode   Currently no use
+ *
+ *  \returnjk:w
+ */
 static int romfs_open(void *opaque, const char *path, int flags, int mode)
 {
 	uint32_t h = hash_djb2((const uint8_t *)path, -1);
 	const uint8_t *romfs = (const uint8_t *)opaque;
-	const uint8_t *file;
-	int r = -1;
+	const uint8_t *file_ptr;
+	int fd = -1;
 
-	file = romfs_neo_get_file_by_hash(romfs, h, NULL);
+	file_ptr = romfs_neo_get_file_by_hash(romfs, h, NULL);
 
-	if (file) {
-		r = fio_open(romfs_read, NULL, romfs_seek, NULL, NULL);
-		if (r > 0) {
-			romfs_fds[r].file = file;
-			romfs_fds[r].cursor = 0;
-			fio_set_opaque(r, romfs_fds + r);
+	if (file_ptr) {
+		fd = fio_open(romfs_read, NULL, romfs_seek, NULL, NULL);
+		if (fd > 0) {
+			romfs_fds[fd].file = file_ptr;
+			romfs_fds[fd].cursor = 0;
+			/*fio_set_opaque(fd, (void*)romfs_fds[fd].file);*/
+			fio_set_opaque(fd, romfs_fds + fd);
 		}
 	}
-	return r;
+	return fd;
 }
 
 void register_romfs_neo(const char *mountpoint, const uint8_t * romfs)

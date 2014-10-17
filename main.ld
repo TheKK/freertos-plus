@@ -16,6 +16,9 @@ SECTIONS
 		_sromfs = .;
                 *(.romfs.*)
 		_eromfs = .;
+		_sromfs_neo = .;
+                *(.romfs_neo.*)
+		_eromfs_neo = .;
 		_sidata = .;
 	} >FLASH
 
