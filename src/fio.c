@@ -92,7 +92,7 @@ struct fddef_t *fio_getfd(int fd)
 static int fio_is_open_int(int fd)
 {
 	if ((fd < 0) || (fd >= MAX_FDS))
-		return 0;
+		return 1;
 	int r = !((fio_fds[fd].fdread == NULL) &&
 		  (fio_fds[fd].fdwrite == NULL) &&
 		  (fio_fds[fd].fdseek == NULL) &&
