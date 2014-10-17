@@ -13,6 +13,46 @@
 #define MAX_FULL_PATH	1024
 #define MAX_BUFFER_SIZE	16 * 1024
 
+/********************************************************************
+ *
+ * How I store data
+ *
+ * Every files and directories will be saved as the
+ * form below. Their "data section" will be different for file and
+ * directory.
+ *
+ * +------------------------------------+
+ * |  hash  |  type  |  param  |  data  |
+ * | 4bytes |  1byte |  1byte  |  1byte |
+ * +------------------------------------+
+ *
+ * [[For directory]]
+ * @hash: store hash of its name(with prefix path).
+ * @type: store character 'D'.
+ * @para: store the number of file(include subdirectories) in this
+ * 	directory.
+ * @data: indicate the first byte of the entire data chunck, below is
+ * 	how data sector looks like when its type is 'D':
+ *
+ *	+--------------------------------------------------------------+
+ *	| length of file(directory) name string | file(directory) path |
+ *	| 1byte                                 | nbyte(s)             |
+ *	+--------------------------------------------------------------+
+ *
+ * [[For file]]
+ * @hash: store hash of its name(with prefix path).
+ * @type: store character 'F'.
+ * @para: not used for file type.
+ * @data: indicate the first byte of the entire data chunck, below is
+ * 	how data sector looks like when its type is 'F':
+ *
+ *	+-------------------------+
+ *	| Entire data in the file |
+ *	| nbyte(s)                |
+ *	+-------------------------+
+ *
+ ********************************************************************/
+
 uint32_t
 hash_djb2(const uint8_t * str, uint32_t hash)
 {
@@ -76,7 +116,7 @@ processdir(DIR * dirp, const char *curpath, FILE * outfile,
 
 			/* Write type(D or F) */
 			fwrite("D", 1, 1, outfile);
-			
+
 			/* Write number of files */
 			file_num = 0;
 			while(readdir(sub_dirp))
