@@ -47,7 +47,7 @@ int fs_open(const char *path, int flags, int mode)
 	int i;
 //    DBGOUT("fs_open(\"%s\", %i, %i)\r\n", path, flags, mode);
 //
-	while (path[0] == '/')
+	if (path[0] == '/')
 		path++;
 
 	slash = strchr(path, '/');
